@@ -25,6 +25,6 @@ unexpected. Use at your own risk. I do use this myself though until I
 change to a better DNS provider though.
 
 This is plugin is more or less made by modifying
-[`certbot-dns-ispconfig`](https://github.com/m42e/certbot-dns-ispconfig).
+[`certbot-dns-ispconfig`](https://github.com/m42e/certbot-dns-ispconfig)
 and
-[`certbot-dns-gratisdns`](https://github.com/Mortal/certbot-dns-gratisdns)
+[`certbot-dns-gratisdns`](https://github.com/Mortal/certbot-dns-gratisdns).
