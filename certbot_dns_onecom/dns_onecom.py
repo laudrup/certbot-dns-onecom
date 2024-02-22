@@ -107,7 +107,7 @@ class _OneComClient(object):
                 return domain
             else:
                 # Domain does not exist, remove first subdomain and try again
-                domain = '.'.join(dom.split(".")[1:])
+                domain = '.'.join(domain.split(".")[1:])
 
         # We reached a top-level domain, raise an Exception
         raise Exception(f'Failed to find root domain for {start_domain}')
