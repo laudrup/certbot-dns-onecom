@@ -93,7 +93,7 @@ class _OneComClient(object):
         login_url = login_form['action']
 
         res = self.session.post(login_url, data=data)
-        if res.status_code != 200:
+        if res.status_code != 200 or "Invalid username or password." in res.text:
             raise Exception(f'Login failed for {self.username}: {res.text}')
 
     def get_root_domain(self, start_domain):
