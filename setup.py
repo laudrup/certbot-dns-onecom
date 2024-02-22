@@ -2,7 +2,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-version = '0.1.0'
+version = '0.1.1'
 
 install_requires = [
     'acme>=0.21.1',
