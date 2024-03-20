@@ -93,13 +93,31 @@ class _OneComClient(object):
         login_url = login_form['action']
 
         res = self.session.post(login_url, data=data)
-        if res.status_code != 200:
+        if res.status_code != 200 or "Invalid username or password." in res.text:
             raise Exception(f'Login failed for {self.username}: {res.text}')
+
+    def get_root_domain(self, start_domain):
+        domain = start_domain
+        # Loop over the subdomains
+        while domain.count('.') > 0:
+            # Get request, join list to string
+            res = self.session.get(f'https://www.one.com/admin/api/domains/{domain}/dns/custom_records')
+            if res.status_code == 200:
+                # Domain found
+                return domain
+            else:
+                # Domain does not exist, remove first subdomain and try again
+                domain = '.'.join(domain.split(".")[1:])
+
+        # We reached a top-level domain, raise an Exception
+        raise Exception(f'Failed to find root domain for {start_domain}')
+
 
     def add_txt_record(self, full_domain, validation_domain_name, validation):
         logger.debug(f'add_txt_record: {full_domain}, {validation_domain_name}, {validation}')
         self.login()
-        prefix = validation_domain_name.split('.')[0]
+        root_domain = self.get_root_domain(full_domain)
+        prefix = validation_domain_name.removesuffix(f'.{root_domain}')
         payload = {
             "type": "dns_custom_records",
             "attributes": {
@@ -110,20 +128,21 @@ class _OneComClient(object):
                 "content": validation
             }
         }
-        res = self.session.post(f'https://www.one.com/admin/api/domains/{full_domain}/dns/custom_records', json=payload)
+        res = self.session.post(f'https://www.one.com/admin/api/domains/{root_domain}/dns/custom_records', json=payload)
         if res.status_code != 200:
             raise Exception(f'Failed to add TXT record for {full_domain}: {res.text}')
 
     def del_txt_record(self, full_domain, validation_domain_name, validation):
         logger.debug(f'del_txt_record: {full_domain}, {validation_domain_name}, {validation}')
         self.login()
-        prefix = validation_domain_name.split('.')[0]
-        custom_records = self.session.get(f'https://www.one.com/admin/api/domains/{full_domain}/dns/custom_records').json()
+        root_domain = self.get_root_domain(full_domain)
+        prefix = validation_domain_name.removesuffix(f'.{root_domain}')
+        custom_records = self.session.get(f'https://www.one.com/admin/api/domains/{root_domain}/dns/custom_records').json()
         validation_record_ids = [rec["id"] for rec in custom_records['result']['data']
                                  if rec["attributes"]["type"] == "TXT"
                                  and rec["attributes"]["prefix"] == prefix]
 
         for record_id in validation_record_ids:
-            res = self.session.delete(f'https://www.one.com/admin/api/domains/{full_domain}/dns/custom_records/{record_id}')
+            res = self.session.delete(f'https://www.one.com/admin/api/domains/{root_domain}/dns/custom_records/{record_id}')
             if res.status_code != 200:
                 logger.warn(f'Failed to remove TXT {validation_domain_name}: {res.text}')
