@@ -11,6 +11,7 @@ install_requires = [
     'setuptools',
     'zope.interface',
     'beautifulsoup4',
+    'pyotp',
 ]
 
 setup(
