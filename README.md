@@ -7,6 +7,7 @@ Create a text file with the following content:
 # One.com credentials used by Certbot
 dns_onecom_username = johndoe
 dns_onecom_password = hunter2
+dns_onecom_totpkey = secretOTPkey
 ```
 
 Run the following command: `sudo certbot certonly -d \*.example.com -d example.com -a dns-onecom`
@@ -16,7 +17,8 @@ When prompted for the config file, enter the path to the above text file.
 About
 -----
 
-Since [One.com](https://one.com) doesn't have an official API this
+Since [One.com](https://one.com) doesn't have an official API
+__[\*](#about "they do have one, it's just not documented for public use")__ this
 plugin is made by reverse engineering the web interface and uses web
 scraping.
 

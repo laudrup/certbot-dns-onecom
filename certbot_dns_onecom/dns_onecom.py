@@ -2,6 +2,7 @@
 import logging
 
 import requests
+import pyotp
 import zope.interface
 from bs4 import BeautifulSoup
 from certbot import interfaces
@@ -48,6 +49,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             {
                 "username": "One.com username",
                 "password": "One.com password",
+                "totpkey": "Secret key for TOTP on One.com",
             },
         )
 
@@ -65,6 +67,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         return _OneComClient(
             self.credentials.conf("username"),
             self.credentials.conf("password"),
+            self.credentials.conf("totpkey"),
             self.ttl,
         )
 
@@ -74,27 +77,56 @@ class _OneComClient(object):
     Encapsulates all communication with One.com.
     """
 
-    def __init__(self, username, password, ttl):
+    def __init__(self, username, password, totpkey, ttl):
         super(_OneComClient, self).__init__()
 
         self.username = username
         self.password = password
+        self.totpkey = totpkey
         self.ttl = ttl
         self.session = requests.Session()
 
+
     def login(self):
-        data = {
-            'username': self.username,
-            'password': self.password,
-        }
         login_page = self.session.get('https://www.one.com/admin').text
         soup = BeautifulSoup(login_page, 'html.parser')
         login_form = soup.find('form', id='kc-form-login')
         login_url = login_form['action']
 
+        # Submit username and password
+        data = {
+            'username': self.username,
+            'password': self.password,
+        }
+        for input_tag in login_form.find_all("input", type="hidden"):
+            if input_tag.get("name") and input_tag.get("value"):
+                data[input_tag["name"]] = input_tag["value"]
         res = self.session.post(login_url, data=data)
-        if res.status_code != 200 or "Invalid username or password." in res.text:
-            raise Exception(f'Login failed for {self.username}: {res.text}')
+
+        if res.status_code != 200:
+            raise Exception(f'Login failed with status code {res.status_code}')
+
+        # Check if we are redirected to TOTP form
+        if 'name="otp"' in res.text:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            otp_form = soup.find("form")
+            otp_url = otp_form["action"]
+            otp_data = {}
+
+            for input_tag in otp_form.find_all("input"):
+                name = input_tag.get("name")
+                if not name:
+                    continue
+                if name == "otp":
+                    otp_code = pyotp.TOTP(self.totpkey).now()
+                    otp_data["otp"] = otp_code
+                else:
+                    otp_data[name] = input_tag.get("value", "")
+
+            res = self.session.post(otp_url, data=otp_data)
+
+        if "Invalid" in res.text or res.status_code != 200:
+            raise Exception(f'TOTP authentication failed for {self.username}: {res.text}')
 
     def get_root_domain(self, start_domain):
         domain = start_domain
@@ -111,7 +143,6 @@ class _OneComClient(object):
 
         # We reached a top-level domain, raise an Exception
         raise Exception(f'Failed to find root domain for {start_domain}')
-
 
     def add_txt_record(self, full_domain, validation_domain_name, validation):
         logger.debug(f'add_txt_record: {full_domain}, {validation_domain_name}, {validation}')

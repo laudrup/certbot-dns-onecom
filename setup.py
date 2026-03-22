@@ -2,7 +2,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 
-version = '0.1.1'
+version = '0.1.2'
 
 install_requires = [
     'acme>=0.21.1',
@@ -11,6 +11,7 @@ install_requires = [
     'setuptools',
     'zope.interface',
     'beautifulsoup4',
+    'pyotp',
 ]
 
 setup(
