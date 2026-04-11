@@ -1,6 +1,9 @@
 One.com DNS Authenticator plugin for Certbot
 ============================================
 
+>[!IMPORTANT]
+>Moved to [Codeberg](https://codeberg.org/laudrup/certbot-dns-onecom) to avoid the effects of Github enshitification by Microsoft.
+
 Create a text file with the following content:
 
 ```
